@@ -55,7 +55,8 @@ public class PhotoGalleryFragment extends Fragment{
                 GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
                 int loadBufferPosition = 1;
                 if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
-                    new FetchItemsTask().execute(lastPosition + 1);
+                    new FetchItemsTask().execute(fetched_page);
+                    Log.i(TAG, "last postion" + String.valueOf(fetched_page));
                 }
             }
 
@@ -116,7 +117,7 @@ public class PhotoGalleryFragment extends Fragment{
 
             photoHolder.bindGalleryItem(galleryItem);
             lastBoundPosition = position;
-            Log.i(TAG, "Last bound position is " + Integer.toString(lastBoundPosition));
+//            Log.i(TAG, "Last bound position is " + Integer.toString(lastBoundPosition));
         }
         @Override
         public int getItemCount() {
@@ -149,6 +150,7 @@ public class PhotoGalleryFragment extends Fragment{
                 setupAdapter();
             }
             fetched_page++;
+
         }
     }
 }
