@@ -1,5 +1,6 @@
 package com.example.yueyangzou.photogallery;
 
+import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -9,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.AbsListView;
 import android.widget.TextView;
 
@@ -44,9 +46,20 @@ public class PhotoGalleryFragment extends Fragment{
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView)v.findViewById(R.id.fragment_photo_gallery_recyclerview);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Point size = new Point();
+                getActivity().getWindowManager().getDefaultDisplay().getSize(size);
+                int newColumns = (int) Math.floor(size.x*3/1440);
+                if (newColumns != 3) {
+                    GridLayoutManager layoutManager = (GridLayoutManager) mPhotoRecyclerView.getLayoutManager();
+                    layoutManager.setSpanCount(newColumns);
+                }
+            }
+        });
         setupAdapter();
         mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-
 
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -56,7 +69,7 @@ public class PhotoGalleryFragment extends Fragment{
                 int loadBufferPosition = 1;
                 if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
                     new FetchItemsTask().execute(fetched_page);
-                    Log.i(TAG, "last postion" + String.valueOf(fetched_page));
+//                    Log.i(TAG, "last postion" + String.valueOf(fetched_page));
                 }
             }
 
@@ -65,6 +78,10 @@ public class PhotoGalleryFragment extends Fragment{
                 super.onScrolled(recyclerView, dx, dy);
             }
         });
+
+
+
+
         return v;
     }
     private void setupAdapter() {
