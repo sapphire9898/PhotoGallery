@@ -10,12 +10,16 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
 /**
  * Created by yueyangzou on 16/8/16.
  */
@@ -51,6 +55,7 @@ public class FlickrFetchr {
 
     public List<GalleryItem> fetchItems() {
         List<GalleryItem> items = new ArrayList<>();
+
         try {
             String url = Uri.parse("https://api.flickr.com/services/rest/").buildUpon()
                     .appendQueryParameter("method", "flickr.photos.getRecent")
@@ -61,15 +66,15 @@ public class FlickrFetchr {
                     .build().toString();
             String jsonString = getUrlString(url);
             Log.i(TAG, "Received JSON: " + jsonString);
-            Gson gson = new Gson();
 
+            parseItemGson(items, jsonString);
 
-            JSONObject jsonBody = new JSONObject(jsonString);
-            parseItems(items, jsonBody);
+//            JSONObject jsonBody = new JSONObject(jsonString);
+//            parseItems(items, jsonBody);
         }
-        catch (JSONException je) {
-            Log.e(TAG, "Failed to parse JSON", je);
-        }
+//        catch (JSONException je) {
+//            Log.e(TAG, "Failed to parse JSON", je);
+//        }
         catch (IOException ioe) {
             Log.e(TAG, "Failed to fetch items", ioe);
         }
@@ -91,6 +96,24 @@ public class FlickrFetchr {
             }
             item.setUrl(photoJsonObject.getString("url_s"));
             items.add(item);
+        }
+    }
+
+    private void parseItemGson(List<GalleryItem> items, String JSONstring) {
+        Gson gson = new GsonBuilder().create();
+
+        Flickr flickr = gson.fromJson(JSONstring, Flickr.class);
+
+        for (Photo p : flickr.photos.photo) {
+            GalleryItem item = new GalleryItem();
+            item.setId(p.getId());
+            item.setCaption(p.getTitle());
+            if (p.getUrl_s() == null || p.getUrl_s() == "") {
+                continue;
+            }
+            item.setUrl(p.getUrl_s());
+            items.add(item);
+
         }
     }
 }
