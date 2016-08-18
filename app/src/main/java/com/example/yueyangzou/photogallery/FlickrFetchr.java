@@ -15,6 +15,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.Gson;
 /**
  * Created by yueyangzou on 16/8/16.
  */
@@ -60,6 +61,9 @@ public class FlickrFetchr {
                     .build().toString();
             String jsonString = getUrlString(url);
             Log.i(TAG, "Received JSON: " + jsonString);
+            Gson gson = new Gson();
+
+
             JSONObject jsonBody = new JSONObject(jsonString);
             parseItems(items, jsonBody);
         }
