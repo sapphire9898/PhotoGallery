@@ -41,13 +41,14 @@ public class PhotoGalleryFragment extends Fragment{
     private class FetchItemsTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
-            try {
-                String result = new FlickrFetchr().getUrlString("http://www.bignerdranch.com");
-                Log.i(TAG, "Fetched contents of URL: " + result);
-            }
-            catch (IOException ioe) {
-                Log.e(TAG, "Failed to fetch URL: ", ioe);
-            }
+//            try {
+//                String result = new FlickrFetchr().getUrlString("http://www.google.com");
+//                Log.i(TAG, "Fetched contents of URL: " + result);
+//            }
+//            catch (IOException ioe) {
+//                Log.e(TAG, "Failed to fetch URL: ", ioe);
+//            }
+            new FlickrFetchr().fetchItems();
             return null;
         }
     }
