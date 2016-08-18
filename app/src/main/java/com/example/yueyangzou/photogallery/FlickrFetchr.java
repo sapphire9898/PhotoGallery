@@ -53,7 +53,7 @@ public class FlickrFetchr {
         return new String(getUrlBytes(urlSpec));
     }
 
-    public List<GalleryItem> fetchItems() {
+    public List<GalleryItem> fetchItems(int page) {
         List<GalleryItem> items = new ArrayList<>();
 
         try {
@@ -63,11 +63,12 @@ public class FlickrFetchr {
                     .appendQueryParameter("format", "json")
                     .appendQueryParameter("nojsoncallback", "1")
                     .appendQueryParameter("extras", "url_s")
+                    .appendQueryParameter("page", String.valueOf(page))
                     .build().toString();
             String jsonString = getUrlString(url);
             Log.i(TAG, "Received JSON: " + jsonString);
 
-            parseItemGson(items, jsonString);
+            parseItemsGson(items, jsonString);
 
 //            JSONObject jsonBody = new JSONObject(jsonString);
 //            parseItems(items, jsonBody);
@@ -99,7 +100,8 @@ public class FlickrFetchr {
         }
     }
 
-    private void parseItemGson(List<GalleryItem> items, String JSONstring) {
+    //challenge 1: Gson
+    private void parseItemsGson(List<GalleryItem> items, String JSONstring) {
         Gson gson = new GsonBuilder().create();
 
         Flickr flickr = gson.fromJson(JSONstring, Flickr.class);

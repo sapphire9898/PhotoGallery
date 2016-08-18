@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
@@ -25,6 +26,8 @@ public class PhotoGalleryFragment extends Fragment{
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItem> mItems = new ArrayList<>();
 
+    private int fetched_page = 1;
+
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
     }
@@ -33,7 +36,7 @@ public class PhotoGalleryFragment extends Fragment{
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchItemsTask().execute();
+        new FetchItemsTask().execute(fetched_page);
     }
 
     @Override
@@ -42,11 +45,38 @@ public class PhotoGalleryFragment extends Fragment{
         mPhotoRecyclerView = (RecyclerView)v.findViewById(R.id.fragment_photo_gallery_recyclerview);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
         setupAdapter();
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                PhotoAdapter adapter = (PhotoAdapter) recyclerView.getAdapter();
+                int lastPosition = adapter.getLastBoundPosition();
+                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+                int loadBufferPosition = 1;
+                if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
+                    new FetchItemsTask().execute(lastPosition + 1);
+                }
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+            }
+        });
         return v;
     }
     private void setupAdapter() {
-        if (isAdded()) {
+//        if (isAdded()) {
+//            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+//        }
+
+        if (getActivity() == null || mPhotoRecyclerView == null) return;
+        if (mItems != null) {
             mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+        }
+        else {
+            mPhotoRecyclerView.setAdapter(null);
         }
     }
     private class PhotoHolder extends RecyclerView.ViewHolder {
@@ -64,6 +94,11 @@ public class PhotoGalleryFragment extends Fragment{
 
     private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
         private List<GalleryItem> mGalleryItems;
+        private int lastBoundPosition;
+
+        public int getLastBoundPosition() {
+            return lastBoundPosition;
+        }
 
         public PhotoAdapter(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
@@ -78,7 +113,10 @@ public class PhotoGalleryFragment extends Fragment{
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
+
             photoHolder.bindGalleryItem(galleryItem);
+            lastBoundPosition = position;
+            Log.i(TAG, "Last bound position is " + Integer.toString(lastBoundPosition));
         }
         @Override
         public int getItemCount() {
@@ -86,9 +124,9 @@ public class PhotoGalleryFragment extends Fragment{
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
         @Override
-        protected List<GalleryItem> doInBackground(Void... params) {
+        protected List<GalleryItem> doInBackground(Integer... params) {
 //            try {
 //                String result = new FlickrFetchr().getUrlString("http://www.google.com");
 //                Log.i(TAG, "Fetched contents of URL: " + result);
@@ -96,14 +134,21 @@ public class PhotoGalleryFragment extends Fragment{
 //            catch (IOException ioe) {
 //                Log.e(TAG, "Failed to fetch URL: ", ioe);
 //            }
-            return new FlickrFetchr().fetchItems();
+            return new FlickrFetchr().fetchItems(params[0]);
 //            return null;
         }
 
         @Override
         protected void onPostExecute(List<GalleryItem> items) {
-            mItems = items;
-            setupAdapter();
+            if (fetched_page > 1) {
+                mItems.addAll(items);
+                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
+            }
+            else {
+                mItems = items;
+                setupAdapter();
+            }
+            fetched_page++;
         }
     }
 }
