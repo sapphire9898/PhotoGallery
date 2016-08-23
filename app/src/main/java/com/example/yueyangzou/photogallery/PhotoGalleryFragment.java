@@ -10,13 +10,18 @@ import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.AbsListView;
 import android.widget.ImageView;
+
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
@@ -44,7 +49,8 @@ public class PhotoGalleryFragment extends Fragment{
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchItemsTask().execute(fetched_page);
+        setHasOptionsMenu(true);
+        updateItems();
         Handler responseHandler = new Handler();
 
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
@@ -80,25 +86,25 @@ public class PhotoGalleryFragment extends Fragment{
 //            }
 //        });
         setupAdapter();
-        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-
-            @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                PhotoAdapter adapter = (PhotoAdapter) recyclerView.getAdapter();
-                int lastPosition = adapter.getLastBoundPosition();
-                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
-                int loadBufferPosition = 1;
-                if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
-                    new FetchItemsTask().execute(fetched_page);
-//                    Log.i(TAG, "last postion" + String.valueOf(fetched_page));
-                }
-            }
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-            }
-        });
+//        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+//
+//            @Override
+//            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+//                PhotoAdapter adapter = (PhotoAdapter) recyclerView.getAdapter();
+//                int lastPosition = adapter.getLastBoundPosition();
+//                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+//                int loadBufferPosition = 1;
+//                if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
+//                    new FetchItemsTask().execute(fetched_page);
+////                    Log.i(TAG, "last postion" + String.valueOf(fetched_page));
+//                }
+//            }
+//
+//            @Override
+//            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+//                super.onScrolled(recyclerView, dx, dy);
+//            }
+//        });
         return v;
     }
     @Override
@@ -113,6 +119,55 @@ public class PhotoGalleryFragment extends Fragment{
         Log.i(TAG, "Background thread destroyed");
     }
 
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_photo_gallery, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.menu_item_search);
+        final SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                Log.d(TAG, "QuerytextSubmit: " + query);
+                QueryPreferences.setStoredQuery(getActivity(), query);
+                updateItems();
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                Log.d(TAG, "QueryTextChange: " + newText);
+                return false;
+            }
+        });
+
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String query = QueryPreferences.getStoredQuery(getActivity());
+                searchView.setQuery(query, false);
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_clear:
+                QueryPreferences.setStoredQuery(getActivity(), null);
+                updateItems();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+    private void updateItems() {
+        String query = QueryPreferences.getStoredQuery(getActivity());
+        new FetchItemsTask(query).execute();
+    }
 
     private void setupAdapter() {
 //        if (isAdded()) {
@@ -180,9 +235,13 @@ public class PhotoGalleryFragment extends Fragment{
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
+        private String mQuery;
+        public FetchItemsTask(String query) {
+            mQuery = query;
+        }
         @Override
-        protected List<GalleryItem> doInBackground(Integer... params) {
+        protected List<GalleryItem> doInBackground(Void... params) {
 //            try {
 //                String result = new FlickrFetchr().getUrlString("http://www.google.com");
 //                Log.i(TAG, "Fetched contents of URL: " + result);
@@ -190,21 +249,29 @@ public class PhotoGalleryFragment extends Fragment{
 //            catch (IOException ioe) {
 //                Log.e(TAG, "Failed to fetch URL: ", ioe);
 //            }
-            return new FlickrFetchr().fetchItems(params[0]);
+
+            if (mQuery == null) {
+                return new FlickrFetchr().fetchRecentPhotos();
+            }
+            else {
+                return new FlickrFetchr().searchPhotos(mQuery);
+            }
 //            return null;
         }
 
         @Override
         protected void onPostExecute(List<GalleryItem> items) {
-            if (fetched_page > 1) {
-                mItems.addAll(items);
-                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
-            }
-            else {
-                mItems = items;
-                setupAdapter();
-            }
-            fetched_page++;
+//            if (fetched_page > 1) {
+//                mItems.addAll(items);
+//                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
+//            }
+//            else {
+//                mItems = items;
+//                setupAdapter();
+//            }
+//            fetched_page++;
+            mItems = items;
+            setupAdapter();
 
         }
     }
